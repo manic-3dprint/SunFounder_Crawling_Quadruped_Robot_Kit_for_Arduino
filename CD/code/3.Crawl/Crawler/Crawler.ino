@@ -32,13 +32,27 @@
 const int pos_x = 0;
 const int pos_y = 1;
 const int pos_z = 2;
-//const float adjust_site[3] = { 100, 80, 42 };
-const float adjust_site[3] = { 100, 80, 30 };
-const float real_site[4][3] = {
-  { 100, 80, 30 }, { 100, 80, 30 },
-  { 100, 80, 30 }, { 100, 80, 30 }
+const float adjust_site[3] = {
+  90, // x
+  60, // y
+  30  // z
 };
-/* Servos --------------------------------------------------------------------*/
+const float real_site[4][3] = {
+  { 100, 60, 40 }, // front right
+  { 100, 60, 40 }, // back right
+  { 100, 60, 40 }, // front left
+  { 100, 60, 40 }  // back left
+};
+//const float real_site[4][3] = {
+//  { 100, 60, 40 }, // front right
+//  { 105, 55, 40 }, // back right
+//  { 98, 68, 40 },  // front left
+//  { 110, 36, 40 }  // back left
+//};
+
+
+/* Serv
+  /* Servos --------------------------------------------------------------------*/
 //define 12 servos for 4 legs
 Servo servo[4][3];
 //define servos' ports
@@ -145,7 +159,7 @@ void setup()
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   sei();
-  stand();
+  //stand();
   cur_time = millis();
   Serial.println("Servos initialized");
   Serial.println("Robot initialization Complete");
@@ -168,7 +182,7 @@ void loop()
 
   //step_forward(1);
   //sit();
-  if (rest_counter > wait_rest_time)
+  if (1 && rest_counter > wait_rest_time)
   {
     if (is_stand())
     {
@@ -622,24 +636,24 @@ void set_site(int leg, float x, float y, float z)
   float length_x = 0, length_y = 0, length_z = 0;
 
   if (x != KEEP)
-    length_x = x - site_now[leg][0];
+    length_x = x - site_now[leg][pos_x];
   if (y != KEEP)
-    length_y = y - site_now[leg][1];
+    length_y = y - site_now[leg][pos_y];
   if (z != KEEP)
-    length_z = z - site_now[leg][2];
+    length_z = z - site_now[leg][pos_z];
 
   float length = sqrt(pow(length_x, 2) + pow(length_y, 2) + pow(length_z, 2));
 
-  temp_speed[leg][0] = length_x / length * move_speed * speed_multiple;
-  temp_speed[leg][1] = length_y / length * move_speed * speed_multiple;
-  temp_speed[leg][2] = length_z / length * move_speed * speed_multiple;
+  temp_speed[leg][pos_x] = length_x / length * move_speed * speed_multiple;
+  temp_speed[leg][pos_y] = length_y / length * move_speed * speed_multiple;
+  temp_speed[leg][pos_z] = length_z / length * move_speed * speed_multiple;
 
   if (x != KEEP)
-    site_expect[leg][0] = x;
+    site_expect[leg][pos_x] = x;
   if (y != KEEP)
-    site_expect[leg][1] = y;
+    site_expect[leg][pos_y] = y;
   if (z != KEEP)
-    site_expect[leg][2] = z;
+    site_expect[leg][pos_z] = z;
 }
 
 /*
@@ -649,9 +663,9 @@ void set_site(int leg, float x, float y, float z)
 void wait_reach(int leg)
 {
   while (1)
-    if (site_now[leg][0] == site_expect[leg][0])
-      if (site_now[leg][1] == site_expect[leg][1])
-        if (site_now[leg][2] == site_expect[leg][2])
+    if (site_now[leg][pos_x] == site_expect[leg][pos_x])
+      if (site_now[leg][pos_y] == site_expect[leg][pos_y])
+        if (site_now[leg][pos_z] == site_expect[leg][pos_z])
           break;
 }
 
@@ -662,9 +676,9 @@ void wait_reach(int leg)
 void wait_reach(int leg, float x, float y, float z)
 {
   while (1)
-    if (site_now[leg][0] == x)
-      if (site_now[leg][1] == y)
-        if (site_now[leg][2] == z)
+    if (site_now[leg][pos_x] == x)
+      if (site_now[leg][pos_y] == y)
+        if (site_now[leg][pos_z] == z)
           break;
 }
 
@@ -761,14 +775,14 @@ void cartesian_to_polar(volatile float &alpha, volatile float &beta, volatile fl
    ---------------------------------------------------------------------------*/
 void polar_to_servo(int leg, float alpha, float beta, float gamma)
 {
-  /*
-    float alpha_error = EEPROM.read(leg * 6 + 0) - 100 + ((float)EEPROM.read(leg * 6 + 1) - 100) / 100;
-    float beta_error  = EEPROM.read(leg * 6 + 2) - 100 + ((float)EEPROM.read(leg * 6 + 3) - 100) / 100;
-    float gamma_error = EEPROM.read(leg * 6 + 4) - 100 + ((float)EEPROM.read(leg * 6 + 5) - 100) / 100;
-  */
-  float alpha_error = 0;
-  float beta_error  = 0;
-  float gamma_error = 0;
+
+  float alpha_error = EEPROM.read(leg * 6 + 0) - 100 + ((float)EEPROM.read(leg * 6 + 1) - 100) / 100;
+  float beta_error  = EEPROM.read(leg * 6 + 2) - 100 + ((float)EEPROM.read(leg * 6 + 3) - 100) / 100;
+  float gamma_error = EEPROM.read(leg * 6 + 4) - 100 + ((float)EEPROM.read(leg * 6 + 5) - 100) / 100;
+
+  //  float alpha_error = 0;
+  //  float beta_error  = 0;
+  //  float gamma_error = 0;
 
   alpha += alpha_error;
   beta += beta_error;
