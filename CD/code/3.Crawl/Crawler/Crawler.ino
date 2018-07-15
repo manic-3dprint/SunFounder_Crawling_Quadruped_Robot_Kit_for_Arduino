@@ -38,10 +38,10 @@ const float adjust_site[3] = {
   30  // z
 };
 const float real_site[4][3] = {
-  { 100, 60, 40 }, // front right
-  { 100, 60, 40 }, // back right
-  { 100, 60, 40 }, // front left
-  { 100, 60, 40 }  // back left
+  { 90, 60, 30 }, // front right
+  { 90, 60, 30 }, // back right
+  { 90, 60, 30 }, // front left
+  { 90, 60, 30 }  // back left
 };
 //const float real_site[4][3] = {
 //  { 100, 60, 40 }, // front right
