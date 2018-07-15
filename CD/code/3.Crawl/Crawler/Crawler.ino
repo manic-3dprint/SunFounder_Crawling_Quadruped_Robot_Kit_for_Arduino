@@ -99,6 +99,14 @@ const float turn_y1 = y_start + y_step / 2;
 const float turn_x0 = turn_x1 - temp_b * cos(temp_alpha);
 const float turn_y0 = temp_b * sin(temp_alpha) - turn_y1 - length_side;
 /* ---------------------------------------------------------------------------*/
+#define TIME_INTERVAL 5000
+
+#define FORWARD 'f'
+#define LEFT 'l'
+#define STAND 's'
+#define RIGHT 'r'
+#define BACKWARD 'b'
+
 unsigned long cur_time;
 /*
   - setup function
@@ -159,7 +167,7 @@ void setup()
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   sei();
-  //stand();
+  stand();
   cur_time = millis();
   Serial.println("Servos initialized");
   Serial.println("Robot initialization Complete");
@@ -180,8 +188,45 @@ void loop()
   while (1);
 #endif
 
-  //step_forward(1);
-  //sit();
+  while (1) {
+    char movements[] = {
+      FORWARD, LEFT, FORWARD, RIGHT, BACKWARD
+    };
+    static unsigned long old_time = cur_time;
+    static int c = 0;
+    char cmd;
+    if (cur_time - old_time >= TIME_INTERVAL ) {
+      old_time = cur_time;
+__auto:
+      if (1) {
+        c = c % (sizeof(movements) / sizeof(char));
+        cmd = movements[c++];
+      } else {
+        c = (int)random(0, sizeof(movements) / sizeof(char));
+        cmd = movements[c];
+      }
+    }
+
+    switch (cmd) {
+      case FORWARD:
+        step_forward(1);
+        break;
+      case BACKWARD:
+        step_back(1);
+        break;
+      case RIGHT:
+        turn_right(1);
+        break;
+      case LEFT:
+        turn_left(1);
+        break;
+      case STAND:
+        stand();
+        break;
+    }
+    cur_time = millis();    
+  }
+
   if (1 && rest_counter > wait_rest_time)
   {
     if (is_stand())
