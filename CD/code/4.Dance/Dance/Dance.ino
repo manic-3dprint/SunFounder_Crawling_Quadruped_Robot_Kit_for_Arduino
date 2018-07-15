@@ -25,9 +25,7 @@
 #include <Servo.h>		//to define and control servos
 #include <FlexiTimer2.h>//to set a timer to manage all servos
 #include <EEPROM.h>		//to save errors of all servos
-#include <SPI.h>		//nRF24L01 module need 1/3
-#include <nRF24L01.h>	//nRF24L01 module need 2/3
-#include <RF24.h>		//nRF24L01 module need 3/3
+
 /* Installation and Adjustment -----------------------------------------------*/
 //#define INSTALL	//uncomment only this to install the robot 	
 //#define ADJUST	//uncomment only this to adjust the servos 
@@ -39,11 +37,8 @@ const float real_site[4][3] = { { 100, 80, 42 }, { 100, 80, 42 },
 //define 12 servos for 4 legs
 Servo servo[4][3];
 //define servos' ports
-const int servo_pin[4][3] = { 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19 };
-/* Wireless communication ----------------------------------------------------*/
-//dfine RF24 for nRF24l01
-RF24 radio(9, 10);	
-//define RF24 transmit pipe
+const int servo_pin[4][3] = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
+
 //NOTE: the "LL" at the end of the constant is "LongLong" type
 const uint64_t pipe = 0xE8E8F0F0E1LL;
 /* Size of the robot ---------------------------------------------------------*/
@@ -95,13 +90,7 @@ void setup()
 	//start serial for debug
 	Serial.begin(115200);
 	Serial.println("Robot starts initialization");
-	//start listen radio
-	radio.begin();
-	radio.openReadingPipe(1,pipe);
-	radio.setRetries(0, 15);
-	radio.setPALevel(RF24_PA_HIGH);
-	radio.startListening();
-	Serial.println("Radio listening started");
+
 	//initialize default parameter
 	set_site(0, x_default, y_default, z_boot);
 	set_site(1, x_default, y_default, z_boot);
@@ -220,11 +209,11 @@ void loop()
 //	move_body_absolute(0, 0, z_default - z_boot);
 
 //
-	Serial.println("Waiting for radio signal");
+//	Serial.println("Waiting for radio signal");
 
 	byte order,old_order;
 	bool mode = true;
-
+/*
 	while (1)
 	{
 		if (radio.available())
@@ -310,7 +299,7 @@ void loop()
 			while (radio.read(&order, 1));
 		}
 	}
-
+*/
 //end of your code -----------------------------------------------------------
 	while (1);
 }
@@ -610,30 +599,30 @@ void polar_to_servo(int leg, float alpha, float beta, float gamma)
 	beta += beta_error;
 	gamma += gamma_error;
 
-	if (leg == 0)
-	{
-		alpha = 90 - alpha;
-		beta = beta;
-		gamma = 90 - gamma;
-	}
-	else if (leg == 1)
-	{
-		alpha += 90;
-		beta = 180 - beta;
-		gamma += 90;
-	}
-	else if (leg == 2)
-	{
-		alpha += 90;
-		beta = 180 - beta;
-		gamma += 90;
-	}
-	else if (leg == 3)
-	{
-		alpha = 90 - alpha;
-		beta = beta;
-		gamma = 90 - gamma;
-	}
+  if (leg == 0)
+  {
+    alpha = 90 - alpha;
+    beta = beta;
+    gamma = 90 + gamma;
+  }
+  else if (leg == 1)
+  {
+    alpha += 90;
+    beta = 180 - beta;
+    gamma =90 - gamma;
+  }
+  else if (leg == 2)
+  {
+    alpha += 90;
+    beta = 180 - beta;
+    gamma = 90 - gamma;
+  }
+  else if (leg == 3)
+  {
+    alpha = 90 - alpha;
+    beta = beta;
+    gamma = 90 + gamma;
+  }
 
 	servo[leg][0].write(alpha);
 	servo[leg][1].write(beta);
