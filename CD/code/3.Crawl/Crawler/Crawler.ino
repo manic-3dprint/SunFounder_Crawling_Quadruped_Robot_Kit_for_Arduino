@@ -23,7 +23,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <Servo.h>		//to define and control servos
-#include <FlexiTimer2.h>//to set a timer to manage all servos
 #include <EEPROM.h>		//to save errors of all servos
 
 /* Installation and Adjustment -----------------------------------------------*/
@@ -41,11 +40,14 @@ Servo servo[4][3];
 const int servo_pin[4][3] = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
 
 /* Size of the robot ---------------------------------------------------------*/
-const float length_a = 55;
-const float length_b = 80;
-const float length_c = 22.75;
-const float length_side = 66;
-const float z_absolute = -12;
+const int femur_servo_index = 0;
+const int tibia_servo_index = 1;
+const int coxa_servo_index = 2;
+const float length_femur = 51;
+const float length_tibia = 80;
+const float length_coxa = 30;
+const float length_side = 90;
+const float z_absolute = -20;
 /* Constants for movement ----------------------------------------------------*/
 const float z_default = -50, z_up = -10, z_boot = z_absolute;
 const float x_default = 70, x_offset = 0;
@@ -78,7 +80,7 @@ const float turn_y1 = y_start + y_step / 2;
 const float turn_x0 = turn_x1 - temp_b * cos(temp_alpha);
 const float turn_y0 = temp_b * sin(temp_alpha) - turn_y1 - length_side;
 /* ---------------------------------------------------------------------------*/
-
+unsigned long cur_time;
 /*
   - setup function
    ---------------------------------------------------------------------------*/
@@ -108,7 +110,7 @@ void setup()
   //start serial for debug
   Serial.begin(115200);
   Serial.println("Robot starts initialization");
-  
+
   //initialize default parameter
   set_site(0, x_default - x_offset, y_start + y_step, z_boot);
   set_site(1, x_default - x_offset, y_start + y_step, z_boot);
@@ -121,9 +123,8 @@ void setup()
       site_now[i][j] = site_expect[i][j];
     }
   }
-  //start servo service
-  FlexiTimer2::set(20, servo_service);
-  FlexiTimer2::start();
+
+
   Serial.println("Servo service started");
   //initialize servos
   for (int i = 0; i < 4; i++)
@@ -134,6 +135,12 @@ void setup()
       delay(100);
     }
   }
+  //start servo service
+  cli();
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
+  sei();
+  cur_time = millis();
   Serial.println("Servos initialized");
   Serial.println("Robot initialization Complete");
 }
@@ -149,24 +156,25 @@ void loop()
 #ifdef VERIFY
   while (1);
 #endif
-  stand();
+  //stand();
   //step_forward(1);
+  sit();
 }
 /*
   - loop function
    ---------------------------------------------------------------------------*/
-/*   
-void loop2()
-{
-#ifdef INSTALL
+/*
+  void loop2()
+  {
+  #ifdef INSTALL
   while (1);
-#endif
-#ifdef ADJUST
+  #endif
+  #ifdef ADJUST
   while (1);
-#endif
-#ifdef VERIFY
+  #endif
+  #ifdef VERIFY
   while (1);
-#endif
+  #endif
 
   //put your code here ---------------------------------------------------------
   Serial.println("Waiting for radio signal");
@@ -238,7 +246,7 @@ void loop2()
 
   //end of your code -----------------------------------------------------------
   while (1);
-}
+  }
 */
 /*
   - adjustment function
@@ -266,9 +274,7 @@ void adjust(void)
       site_now[i][j] = site_expect[i][j];
     }
   }
-  //start servo service
-  FlexiTimer2::set(20, servo_service);
-  FlexiTimer2::start();
+
   //initialize servos
   for (int i = 0; i < 4; i++)
   {
@@ -279,6 +285,11 @@ void adjust(void)
       delay(100);
     }
   }
+  //start servo service
+  cli();
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
+  sei();
 }
 
 /*
@@ -319,9 +330,7 @@ void verify(void)
       site_now[i][j] = site_expect[i][j];
     }
   }
-  //start servo service
-  FlexiTimer2::set(20, servo_service);
-  FlexiTimer2::start();
+
   //initialize servos
   for (int i = 0; i < 4; i++)
   {
@@ -331,6 +340,13 @@ void verify(void)
       delay(100);
     }
   }
+  //start servo service
+  //  FlexiTimer2::set(20, servo_service);
+  //  FlexiTimer2::start();
+  cli();
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
+  sei();
 }
 
 /*
@@ -738,7 +754,16 @@ void wait_all_reach(void)
   - temp_speed[4][3] should be set before set expect site,it make sure the end point
    move in a straight line,and decide move speed.
    ---------------------------------------------------------------------------*/
-void servo_service(void)
+SIGNAL(TIMER0_COMPA_vect) {
+  static long old_time = cur_time;
+  if (cur_time - old_time >= 20) {
+    old_time = cur_time;
+    servo_service();
+  }
+  cur_time = millis();
+}
+
+inline void servo_service(void)
 {
   sei();
   static float alpha, beta, gamma;
@@ -771,9 +796,9 @@ void polar_to_cartesian(volatile float alpha, volatile float beta, volatile floa
   gamma = gamma / 180 * pi;
   //calculate w-z position
   float v, w;
-  v = length_a * cos(alpha) - length_b * cos(alpha + beta);
-  z = length_a * sin(alpha) - length_b * sin(alpha + beta);
-  w = v + length_c;
+  v = length_femur * cos(alpha) - length_tibia * cos(alpha + beta);
+  z = length_femur * sin(alpha) - length_tibia * sin(alpha + beta);
+  w = v + length_coxa;
   //calculate x-y-z position
   x = w * cos(gamma);
   y = w * sin(gamma);
@@ -788,9 +813,9 @@ void cartesian_to_polar(volatile float &alpha, volatile float &beta, volatile fl
   //calculate w-z degree
   float v, w;
   w = (x >= 0 ? 1 : -1) * (sqrt(pow(x, 2) + pow(y, 2)));
-  v = w - length_c;
-  alpha = atan2(z, v) + acos((pow(length_a, 2) - pow(length_b, 2) + pow(v, 2) + pow(z, 2)) / 2 / length_a / sqrt(pow(v, 2) + pow(z, 2)));
-  beta = acos((pow(length_a, 2) + pow(length_b, 2) - pow(v, 2) - pow(z, 2)) / 2 / length_a / length_b);
+  v = w - length_coxa;
+  alpha = atan2(z, v) + acos((pow(length_femur, 2) - pow(length_tibia, 2) + pow(v, 2) + pow(z, 2)) / 2 / length_femur / sqrt(pow(v, 2) + pow(z, 2)));
+  beta = acos((pow(length_femur, 2) + pow(length_tibia, 2) - pow(v, 2) - pow(z, 2)) / 2 / length_femur / length_tibia);
   //calculate x-y-z degree
   gamma = (w >= 0) ? atan2(y, x) : atan2(-y, -x);
   //trans degree pi->180
@@ -844,7 +869,8 @@ void polar_to_servo(int leg, float alpha, float beta, float gamma)
     gamma = 90 + gamma;
   }
 
-  servo[leg][0].write(alpha);
-  servo[leg][1].write(beta);
-  servo[leg][2].write(gamma);
+  servo[leg][femur_servo_index].write(alpha);
+  servo[leg][tibia_servo_index].write(beta);
+  servo[leg][coxa_servo_index].write(gamma);
 }
+
