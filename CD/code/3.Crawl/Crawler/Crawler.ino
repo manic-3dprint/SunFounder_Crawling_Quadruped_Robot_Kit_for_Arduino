@@ -29,9 +29,14 @@
 //#define INSTALL	//uncomment only this to install the robot
 //#define ADJUST	//uncomment only this to adjust the servos
 //#define VERIFY	//uncomment only this to verify the adjustment
-const float adjust_site[3] = { 100, 80, 42 };
-const float real_site[4][3] = { { 100, 80, 42 }, { 100, 80, 42 },
-  { 100, 80, 42 }, { 100, 80, 42 }
+const int pos_x = 0;
+const int pos_y = 1;
+const int pos_z = 2;
+//const float adjust_site[3] = { 100, 80, 42 };
+const float adjust_site[3] = { 100, 80, 30 };
+const float real_site[4][3] = {
+  { 100, 80, 30 }, { 100, 80, 30 },
+  { 100, 80, 30 }, { 100, 80, 30 }
 };
 /* Servos --------------------------------------------------------------------*/
 //define 12 servos for 4 legs
@@ -132,7 +137,7 @@ void setup()
     for (int j = 0; j < 3; j++)
     {
       servo[i][j].attach(servo_pin[i][j]);
-      delay(100);
+      //delay(100);
     }
   }
   //start servo service
@@ -140,11 +145,15 @@ void setup()
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   sei();
+  stand();
   cur_time = millis();
   Serial.println("Servos initialized");
   Serial.println("Robot initialization Complete");
-}
 
+}
+/*
+  - loop function
+   ---------------------------------------------------------------------------*/
 void loop()
 {
 #ifdef INSTALL
@@ -156,98 +165,20 @@ void loop()
 #ifdef VERIFY
   while (1);
 #endif
-  //stand();
+
   //step_forward(1);
-  sit();
+  //sit();
+  if (rest_counter > wait_rest_time)
+  {
+    if (is_stand())
+    {
+      Serial.println("Auto sit");
+      sit();
+      rest_counter = 0;
+    }
+  }
 }
-/*
-  - loop function
-   ---------------------------------------------------------------------------*/
-/*
-  void loop2()
-  {
-  #ifdef INSTALL
-  while (1);
-  #endif
-  #ifdef ADJUST
-  while (1);
-  #endif
-  #ifdef VERIFY
-  while (1);
-  #endif
 
-  //put your code here ---------------------------------------------------------
-  Serial.println("Waiting for radio signal");
-  while (1);
-  byte order;
-  while (1)
-  {
-    if (radio.available())
-    {
-      if (radio.read(&order, 1))
-      {
-        if (order > 0)
-        {
-          Serial.print("Order:");
-          Serial.print(order);
-          Serial.print(" //");
-
-          if (order < 5)
-            if (!is_stand())
-              stand();
-
-          switch (order)
-          {
-            case 1:
-              Serial.println("Step forward");
-              step_forward(1);
-              break;
-            case 2:
-              Serial.println("Step back");
-              step_back(1);
-              break;
-            case 3:
-              Serial.println("Turn left");
-              turn_left(1);
-              break;
-            case 4:
-              Serial.println("Turn right");
-              turn_right(1);
-              break;
-            case 5:
-              if (is_stand())
-              {
-                Serial.println("Sit");
-                sit();
-              }
-              else
-              {
-                Serial.println("Stand");
-                stand();
-              }
-              break;
-          }
-
-          rest_counter = 0;
-        }
-      }
-      while (radio.read(&order, 1));
-    }
-    if (rest_counter > wait_rest_time)
-    {
-      if (is_stand())
-      {
-        Serial.println("Auto sit");
-        sit();
-        rest_counter = 0;
-      }
-    }
-  }
-
-  //end of your code -----------------------------------------------------------
-  while (1);
-  }
-*/
 /*
   - adjustment function
   - move each leg to adjustment site, so that you can measure the real sites.
@@ -266,23 +197,22 @@ void adjust(void)
   }
 
   //initializes the relevant variables to adjustment position
-  for (int i = 0; i < 4; i++)
+  for (int leg = 0; leg < 4; leg++)
   {
-    set_site(i, adjust_site[0], adjust_site[1], adjust_site[2] + z_absolute);
+    set_site(leg, adjust_site[pos_x], adjust_site[pos_y], adjust_site[pos_z] + z_absolute);
     for (int j = 0; j < 3; j++)
     {
-      site_now[i][j] = site_expect[i][j];
+      site_now[leg][j] = site_expect[leg][j];
     }
   }
 
   //initialize servos
-  for (int i = 0; i < 4; i++)
+  for (int leg = 0; leg < 4; leg++)
   {
     for (int j = 0; j < 3; j++)
     {
-      servo[i][j].attach(servo_pin[i][j]);
-      servo[i][j].write(90);
-      delay(100);
+      servo[leg][j].attach(servo_pin[leg][j]);
+      //delay(100);
     }
   }
   //start servo service
@@ -300,44 +230,44 @@ void verify(void)
 {
   //calculate correct degree
   float alpha0, beta0, gamma0;
-  cartesian_to_polar(alpha0, beta0, gamma0, adjust_site[0], adjust_site[1], adjust_site[2] + z_absolute);
+  cartesian_to_polar(alpha0, beta0, gamma0, adjust_site[pos_x], adjust_site[pos_y], adjust_site[pos_z] + z_absolute);
   //calculate real degree and errors
   float alpha, beta, gamma;
   float degree_error[4][3];
-  for (int i = 0; i < 4; i++)
+  for (int leg = 0; leg < 4; leg++)
   {
-    cartesian_to_polar(alpha, beta, gamma, real_site[i][0], real_site[i][1], real_site[i][2] + z_absolute);
-    degree_error[i][0] = alpha0 - alpha;
-    degree_error[i][1] = beta0 - beta;
-    degree_error[i][2] = gamma0 - gamma;
+    cartesian_to_polar(alpha, beta, gamma, real_site[leg][pos_x], real_site[leg][pos_y], real_site[leg][pos_z] + z_absolute);
+    degree_error[leg][femur_servo_index] = alpha0 - alpha;
+    degree_error[leg][tibia_servo_index] = beta0 - beta;
+    degree_error[leg][coxa_servo_index] = gamma0 - gamma;
   }
   //save errors to eeprom
-  for (int i = 0; i < 4; i++)
+  for (int leg = 0; leg < 4; leg++)
   {
     for (int j = 0; j < 3; j++)
     {
-      EEPROM.write(i * 6 + j * 2, (int)degree_error[i][j] + 100);
-      EEPROM.write(i * 6 + j * 2 + 1, (int)(degree_error[i][j] * 100) % 100 + 100);
+      EEPROM.write(leg * 6 + j * 2, (int)degree_error[leg][j] + 100);
+      EEPROM.write(leg * 6 + j * 2 + 1, (int)(degree_error[leg][j] * 100) % 100 + 100);
     }
   }
 
   //initializes the relevant variables to adjustment position
-  for (int i = 0; i < 4; i++)
+  for (int leg = 0; leg < 4; leg++)
   {
-    set_site(i, adjust_site[0], adjust_site[1], adjust_site[2] + z_absolute);
+    set_site(leg, adjust_site[pos_x], adjust_site[pos_y], adjust_site[pos_z] + z_absolute);
     for (int j = 0; j < 3; j++)
     {
-      site_now[i][j] = site_expect[i][j];
+      site_now[leg][j] = site_expect[leg][j];
     }
   }
 
   //initialize servos
-  for (int i = 0; i < 4; i++)
+  for (int leg = 0; leg < 4; leg++)
   {
     for (int j = 0; j < 3; j++)
     {
-      servo[i][j].attach(servo_pin[i][j]);
-      delay(100);
+      servo[leg][j].attach(servo_pin[leg][j]);
+      //delay(100);
     }
   }
   //start servo service
