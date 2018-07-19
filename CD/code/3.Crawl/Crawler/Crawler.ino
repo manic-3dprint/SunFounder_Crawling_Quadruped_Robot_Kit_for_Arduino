@@ -33,22 +33,16 @@ const int pos_x = 0;
 const int pos_y = 1;
 const int pos_z = 2;
 const float adjust_site[3] = {
-  90, // x
-  60, // y
-  30  // z
+  75, // x
+  72, // y
+  27  // z
 };
 const float real_site[4][3] = {
-  { 90, 60, 30 }, // front right
-  { 90, 60, 30 }, // back right
-  { 90, 60, 30 }, // front left
-  { 90, 60, 30 }  // back left
+  { 75, 72, 27 }, // front right
+  { 75, 72, 27 }, // back right
+  { 75, 72, 27 }, // front left
+  { 75, 72, 27 }  // back left
 };
-//const float real_site[4][3] = {
-//  { 100, 60, 40 }, // front right
-//  { 105, 55, 40 }, // back right
-//  { 98, 68, 40 },  // front left
-//  { 110, 36, 40 }  // back left
-//};
 
 
 /* Serv
