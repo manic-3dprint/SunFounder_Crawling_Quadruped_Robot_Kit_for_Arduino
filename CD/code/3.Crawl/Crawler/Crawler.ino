@@ -33,16 +33,17 @@ const int pos_x = 0;
 const int pos_y = 1;
 const int pos_z = 2;
 const float adjust_site[3] = {
-  90, // x
-  60, // y
+  62, // x
+  40, // y X
   30  // z
 };
 const float real_site[4][3] = {
-  { 90, 60, 30 }, // front right
-  { 90, 60, 30 }, // back right
-  { 90, 60, 30 }, // front left
-  { 90, 60, 30 }  // back left
+  { 62, 40, 30 }, // front right
+  {  62, 40, 30 }, // back right
+  {  62, 40, 30 }, // front left
+  {  62, 40, 30 }  // back left
 };
+
 //const float real_site[4][3] = {
 //  { 100, 60, 40 }, // front right
 //  { 105, 55, 40 }, // back right
@@ -62,10 +63,11 @@ const int servo_pin[4][3] = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
 const int femur_servo_index = 0;
 const int tibia_servo_index = 1;
 const int coxa_servo_index = 2;
-const float length_femur = 51;
-const float length_tibia = 80;
-const float length_coxa = 30;
-const float length_side = 90;
+const float length_femur = 40;
+const float length_tibia = 70;
+const float length_coxa = 33;
+const float length_side = 65.5;
+
 const float z_absolute = -20;
 /* Constants for movement ----------------------------------------------------*/
 const float z_default = -50, z_up = -10, z_boot = z_absolute;
@@ -224,7 +226,7 @@ __auto:
         stand();
         break;
     }
-    cur_time = millis();    
+    cur_time = millis();
   }
 
   if (1 && rest_counter > wait_rest_time)
