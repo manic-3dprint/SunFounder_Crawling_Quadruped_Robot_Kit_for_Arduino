@@ -60,10 +60,10 @@ const float length_femur = 51;
 const float length_tibia = 80;
 const float length_coxa = 30;
 const float length_side = 90;
-const float z_absolute = -20;
+const float z_absolute = -27;
 /* Constants for movement ----------------------------------------------------*/
-const float z_default = -50, z_up = -10, z_boot = z_absolute;
-const float x_default = 70, x_offset = 0;
+const float z_default = -70, z_up = -10, z_boot = z_absolute;
+const float x_default = 75, x_offset = 0;
 const float y_start = 0, y_step = 50;
 /* variables for movement ----------------------------------------------------*/
 volatile float site_now[4][3];		//real-time coordinates of the end of each leg
