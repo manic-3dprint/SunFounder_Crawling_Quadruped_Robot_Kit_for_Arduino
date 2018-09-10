@@ -164,14 +164,19 @@ void setup()
       //delay(100);
     }
   }
-  //start servo service
+  calib_servo(); // for adjusting initial servo position
+                 // which are in 90 degree
+  
+  //start servo service in a interrupt routine
   cli();
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   sei();
+  Serial.println("Servos initialized");
+  
+  //robot starts in  stance
   stand();
   cur_time = millis();
-  Serial.println("Servos initialized");
   Serial.println("Robot initialization Complete");
 
 }
@@ -239,6 +244,23 @@ __auto:
     }
   }
 }
+
+#define CAL_TRIGGER_PIN A5
+void calib_servo(void)
+{
+  pinMode(CAL_TRIGGER_PIN, OUTPUT);
+  digitalWrite(CAL_TRIGGER_PIN, 0);
+  pinMode(CAL_TRIGGER_PIN, INPUT);
+  if (digitalRead(CAL_TRIGGER_PIN)) {
+//    for (int leg = 0; leg < 4; leg++) {
+//      servo[leg][femur_servo_index].write(90);
+//      servo[leg][tibia_servo_index].write(90);
+//      servo[leg][coxa_servo_index].write(90);
+//    }
+    while (digitalRead(CAL_TRIGGER_PIN)) delay(1000);
+  }
+}
+
 
 /*
   - adjustment function
@@ -823,13 +845,13 @@ void cartesian_to_polar(volatile float &alpha, volatile float &beta, volatile fl
 void polar_to_servo(int leg, float alpha, float beta, float gamma)
 {
 
-  float alpha_error = EEPROM.read(leg * 6 + 0) - 100 + ((float)EEPROM.read(leg * 6 + 1) - 100) / 100;
-  float beta_error  = EEPROM.read(leg * 6 + 2) - 100 + ((float)EEPROM.read(leg * 6 + 3) - 100) / 100;
-  float gamma_error = EEPROM.read(leg * 6 + 4) - 100 + ((float)EEPROM.read(leg * 6 + 5) - 100) / 100;
+//  float alpha_error = EEPROM.read(leg * 6 + 0) - 100 + ((float)EEPROM.read(leg * 6 + 1) - 100) / 100;
+//  float beta_error  = EEPROM.read(leg * 6 + 2) - 100 + ((float)EEPROM.read(leg * 6 + 3) - 100) / 100;
+//  float gamma_error = EEPROM.read(leg * 6 + 4) - 100 + ((float)EEPROM.read(leg * 6 + 5) - 100) / 100;
 
-  //  float alpha_error = 0;
-  //  float beta_error  = 0;
-  //  float gamma_error = 0;
+  float alpha_error = 0;
+  float beta_error  = 0;
+  float gamma_error = 0;
 
   alpha += alpha_error;
   beta += beta_error;
