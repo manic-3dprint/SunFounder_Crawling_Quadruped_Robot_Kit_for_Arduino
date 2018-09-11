@@ -26,15 +26,15 @@
 #include <EEPROM.h>		//to save errors of all servos
 
 /* Installation and Adjustment -----------------------------------------------*/
-//#define INSTALL	//uncomment only this to install the robot
 //#define ADJUST	//uncomment only this to adjust the servos
 //#define VERIFY	//uncomment only this to verify the adjustment
 const int pos_x = 0;
 const int pos_y = 1;
 const int pos_z = 2;
+
 const float adjust_site[3] = {
   62, // x
-  40, // y X
+  40, // y
   30  // z
 };
 const float real_site[4][3] = {
@@ -44,14 +44,6 @@ const float real_site[4][3] = {
   {  62, 40, 30 }  // back left
 };
 
-//const float real_site[4][3] = {
-//  { 100, 60, 40 }, // front right
-//  { 105, 55, 40 }, // back right
-//  { 98, 68, 40 },  // front left
-//  { 110, 36, 40 }  // back left
-//};
-
-
 /* Serv
   /* Servos --------------------------------------------------------------------*/
 //define 12 servos for 4 legs
@@ -60,9 +52,10 @@ Servo servo[4][3];
 const int servo_pin[4][3] = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
 
 /* Size of the robot ---------------------------------------------------------*/
-const int femur_servo_index = 0;
-const int tibia_servo_index = 1;
-const int coxa_servo_index = 2;
+const int femur_index = 0;
+const int tibia_index = 1;
+const int coxa_index = 2;
+
 const float length_femur = 40;
 const float length_tibia = 70;
 const float length_coxa = 33;
@@ -115,18 +108,7 @@ unsigned long cur_time;
    ---------------------------------------------------------------------------*/
 void setup()
 {
-#ifdef INSTALL
-  //initialize all servos
-  for (int i = 0; i < 4; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      servo[i][j].attach(servo_pin[i][j]);
-      delay(100);
-    }
-  }
-  while (1);
-#endif
+
 #ifdef ADJUST
   adjust();
   while (1);
@@ -145,36 +127,41 @@ void setup()
   set_site(1, x_default - x_offset, y_start + y_step, z_boot);
   set_site(2, x_default + x_offset, y_start, z_boot);
   set_site(3, x_default + x_offset, y_start, z_boot);
-  for (int i = 0; i < 4; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      site_now[i][j] = site_expect[i][j];
-    }
-  }
 
+  for (int leg = 0; leg < 4; leg++)  {
+    site_now[leg][pos_x] = site_expect[leg][pos_x];
+    site_now[leg][pos_y] = site_expect[leg][pos_y];
+    site_now[leg][pos_z] = site_expect[leg][pos_z];
+    //
+    //    for (int j = 0; j < 3; j++) {
+    //      site_now[i][j] = site_expect[i][j];
+    //    }
+  }
 
   Serial.println("Servo service started");
-  //initialize servos
-  for (int i = 0; i < 4; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      servo[i][j].attach(servo_pin[i][j]);
-      //delay(100);
-    }
+  //initialize servos, all at 90 degree
+  for (int leg = 0; leg < 4; leg++)  {
+    servo[leg][femur_index].attach(servo_pin[leg][femur_index]);
+    servo[leg][tibia_index].attach(servo_pin[leg][tibia_index]);
+    servo[leg][coxa_index].attach(servo_pin[leg][coxa_index]);
+//
+//    for (int j = 0; j < 3; j++) {
+//      servo[leg][j].attach(servo_pin[leg][j]);
+//      delay(100);
+//    }
   }
-  calib_servo(); // for adjusting initial servo position
-                 // which are in 90 degree
-  
-  //start servo service in a interrupt routine
+
+  // if needed, pause on initial servo positions for servo adjusting/installation
+  calib_servo();
+
+  //start servo service
   cli();
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
   sei();
   Serial.println("Servos initialized");
-  
-  //robot starts in  stance
+
+  //robot starts in stance posture
   stand();
   cur_time = millis();
   Serial.println("Robot initialization Complete");
@@ -185,9 +172,7 @@ void setup()
    ---------------------------------------------------------------------------*/
 void loop()
 {
-#ifdef INSTALL
-  while (1);
-#endif
+
 #ifdef ADJUST
   while (1);
 #endif
@@ -234,10 +219,8 @@ __auto:
     cur_time = millis();
   }
 
-  if (1 && rest_counter > wait_rest_time)
-  {
-    if (is_stand())
-    {
+  if (1 && rest_counter > wait_rest_time)  {
+    if (is_stand()) {
       Serial.println("Auto sit");
       sit();
       rest_counter = 0;
@@ -252,11 +235,11 @@ void calib_servo(void)
   digitalWrite(CAL_TRIGGER_PIN, 0);
   pinMode(CAL_TRIGGER_PIN, INPUT);
   if (digitalRead(CAL_TRIGGER_PIN)) {
-//    for (int leg = 0; leg < 4; leg++) {
-//      servo[leg][femur_servo_index].write(90);
-//      servo[leg][tibia_servo_index].write(90);
-//      servo[leg][coxa_servo_index].write(90);
-//    }
+    //    for (int leg = 0; leg < 4; leg++) {
+    //      servo[leg][femur_index].write(90);
+    //      servo[leg][tibia_index].write(90);
+    //      servo[leg][coxa_index].write(90);
+    //    }
     while (digitalRead(CAL_TRIGGER_PIN)) delay(1000);
   }
 }
@@ -270,34 +253,34 @@ void adjust(void)
 {
   //initializes eeprom's errors to 0
   //number -100 - +100 is map to 0 - +200 in eeprom
-  for (int i = 0; i < 4; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      EEPROM.write(i * 6 + j * 2, 100);
-      EEPROM.write(i * 6 + j * 2 + 1, 100);
-    }
+  for (int leg = 0; leg < 4; leg++)  {
+    EEPROM.write(leg * 6 + femur_index  * 2, 100);
+    EEPROM.write(leg * 6 + femur_index * 2 + 1, 100);
+
+    EEPROM.write(leg * 6 + tibia_index  * 2, 100);
+    EEPROM.write(leg * 6 + tibia_index * 2 + 1, 100);
+
+    EEPROM.write(leg * 6 + coxa_index  * 2, 100);
+    EEPROM.write(leg * 6 + coxa_index * 2 + 1, 100);
+
+    //    for (int joint = 0; joint < 3; joint++) {
+    //      EEPROM.write(leg * 6 + joint * 2, 100);
+    //      EEPROM.write(leg * 6 + joint * 2 + 1, 100);
+    //    }
   }
 
   //initializes the relevant variables to adjustment position
-  for (int leg = 0; leg < 4; leg++)
-  {
+  for (int leg = 0; leg < 4; leg++)  {
     set_site(leg, adjust_site[pos_x], adjust_site[pos_y], adjust_site[pos_z] + z_absolute);
-    for (int j = 0; j < 3; j++)
-    {
-      site_now[leg][j] = site_expect[leg][j];
-    }
+    site_now[leg][pos_x] = site_expect[leg][pos_x];
+    site_now[leg][pos_y] = site_expect[leg][pos_y];
+    site_now[leg][pos_z] = site_expect[leg][pos_z];
+    //
+    //    for (int j = 0; j < 3; j++) {
+    //      site_now[leg][j] = site_expect[leg][j];
+    //    }
   }
 
-  //initialize servos
-  for (int leg = 0; leg < 4; leg++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      servo[leg][j].attach(servo_pin[leg][j]);
-      //delay(100);
-    }
-  }
   //start servo service
   cli();
   OCR0A = 0xAF;
@@ -314,48 +297,47 @@ void verify(void)
   //calculate correct degree
   float alpha0, beta0, gamma0;
   cartesian_to_polar(alpha0, beta0, gamma0, adjust_site[pos_x], adjust_site[pos_y], adjust_site[pos_z] + z_absolute);
+
   //calculate real degree and errors
   float alpha, beta, gamma;
   float degree_error[4][3];
-  for (int leg = 0; leg < 4; leg++)
-  {
+  for (int leg = 0; leg < 4; leg++) {
     cartesian_to_polar(alpha, beta, gamma, real_site[leg][pos_x], real_site[leg][pos_y], real_site[leg][pos_z] + z_absolute);
-    degree_error[leg][femur_servo_index] = alpha0 - alpha;
-    degree_error[leg][tibia_servo_index] = beta0 - beta;
-    degree_error[leg][coxa_servo_index] = gamma0 - gamma;
+    degree_error[leg][femur_index] = alpha0 - alpha;
+    degree_error[leg][tibia_index] = beta0 - beta;
+    degree_error[leg][coxa_index] = gamma0 - gamma;
   }
   //save errors to eeprom
-  for (int leg = 0; leg < 4; leg++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      EEPROM.write(leg * 6 + j * 2, (int)degree_error[leg][j] + 100);
-      EEPROM.write(leg * 6 + j * 2 + 1, (int)(degree_error[leg][j] * 100) % 100 + 100);
-    }
+  for (int leg = 0; leg < 4; leg++) {
+    EEPROM.write(leg * 6 + femur_index  * 2, (int)degree_error[leg][femur_index] + 100);
+    EEPROM.write(leg * 6 + femur_index * 2 + 1, (int)(degree_error[leg][femur_index] * 100) % 100 + 100);
+
+    EEPROM.write(leg * 6 + tibia_index  * 2, (int)degree_error[leg][tibia_index] + 100);
+    EEPROM.write(leg * 6 + tibia_index * 2 + 1, (int)(degree_error[leg][tibia_index] * 100) % 100 + 100);
+
+    EEPROM.write(leg * 6 + coxa_index  * 2, (int)degree_error[leg][coxa_index] + 100);
+    EEPROM.write(leg * 6 + coxa_index * 2 + 1, (int)(degree_error[leg][coxa_index] * 100) % 100 + 100);
+
+
+    //    for (int j = 0; j < 3; j++) {
+    //      EEPROM.write(leg * 6 + j * 2, (int)degree_error[leg][j] + 100);
+    //      EEPROM.write(leg * 6 + j * 2 + 1, (int)(degree_error[leg][j] * 100) % 100 + 100);
+    //    }
   }
 
   //initializes the relevant variables to adjustment position
-  for (int leg = 0; leg < 4; leg++)
-  {
+  for (int leg = 0; leg < 4; leg++)  {
     set_site(leg, adjust_site[pos_x], adjust_site[pos_y], adjust_site[pos_z] + z_absolute);
-    for (int j = 0; j < 3; j++)
-    {
-      site_now[leg][j] = site_expect[leg][j];
-    }
+
+    site_now[leg][pos_x] = site_expect[leg][pos_x];
+    site_now[leg][pos_y] = site_expect[leg][pos_y];
+    site_now[leg][pos_z] = site_expect[leg][pos_z];
+    //    for (int j = 0; j < 3; j++) {
+    //      site_now[leg][j] = site_expect[leg][j];
+    //    }
   }
 
-  //initialize servos
-  for (int leg = 0; leg < 4; leg++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      servo[leg][j].attach(servo_pin[leg][j]);
-      //delay(100);
-    }
-  }
   //start servo service
-  //  FlexiTimer2::set(20, servo_service);
-  //  FlexiTimer2::start();
   cli();
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
@@ -757,8 +739,8 @@ void wait_reach(int leg, float x, float y, float z)
    ---------------------------------------------------------------------------*/
 void wait_all_reach(void)
 {
-  for (int i = 0; i < 4; i++)
-    wait_reach(i);
+  for (int leg = 0; leg < 4; leg++)
+    wait_reach(leg);
 }
 
 /*
@@ -781,18 +763,15 @@ inline void servo_service(void)
   sei();
   static float alpha, beta, gamma;
 
-  for (int i = 0; i < 4; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      if (abs(site_now[i][j] - site_expect[i][j]) >= abs(temp_speed[i][j]))
-        site_now[i][j] += temp_speed[i][j];
+  for (int leg = 0; leg < 4; leg++)  {
+    for (int pos = 0; pos < 3; pos++) {
+      if (abs(site_now[leg][pos] - site_expect[leg][pos]) >= abs(temp_speed[leg][pos]))
+        site_now[leg][pos] += temp_speed[leg][pos];
       else
-        site_now[i][j] = site_expect[i][j];
+        site_now[leg][pos] = site_expect[leg][pos];
     }
-
-    cartesian_to_polar(alpha, beta, gamma, site_now[i][0], site_now[i][1], site_now[i][2]);
-    polar_to_servo(i, alpha, beta, gamma);
+    cartesian_to_polar(alpha, beta, gamma, site_now[leg][pos_x], site_now[leg][pos_y], site_now[leg][pos_z]);
+    polar_to_servo(leg, alpha, beta, gamma);
   }
 
   rest_counter++;
@@ -845,9 +824,9 @@ void cartesian_to_polar(volatile float &alpha, volatile float &beta, volatile fl
 void polar_to_servo(int leg, float alpha, float beta, float gamma)
 {
 
-//  float alpha_error = EEPROM.read(leg * 6 + 0) - 100 + ((float)EEPROM.read(leg * 6 + 1) - 100) / 100;
-//  float beta_error  = EEPROM.read(leg * 6 + 2) - 100 + ((float)EEPROM.read(leg * 6 + 3) - 100) / 100;
-//  float gamma_error = EEPROM.read(leg * 6 + 4) - 100 + ((float)EEPROM.read(leg * 6 + 5) - 100) / 100;
+  //  float alpha_error = EEPROM.read(leg * 6 + 0) - 100 + ((float)EEPROM.read(leg * 6 + 1) - 100) / 100;
+  //  float beta_error  = EEPROM.read(leg * 6 + 2) - 100 + ((float)EEPROM.read(leg * 6 + 3) - 100) / 100;
+  //  float gamma_error = EEPROM.read(leg * 6 + 4) - 100 + ((float)EEPROM.read(leg * 6 + 5) - 100) / 100;
 
   float alpha_error = 0;
   float beta_error  = 0;
@@ -882,8 +861,8 @@ void polar_to_servo(int leg, float alpha, float beta, float gamma)
     gamma = 90 + gamma;
   }
 
-  servo[leg][femur_servo_index].write(alpha);
-  servo[leg][tibia_servo_index].write(beta);
-  servo[leg][coxa_servo_index].write(gamma);
+  servo[leg][femur_index].write(alpha);
+  servo[leg][tibia_index].write(beta);
+  servo[leg][coxa_index].write(gamma);
 }
 
