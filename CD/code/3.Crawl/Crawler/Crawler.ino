@@ -56,6 +56,11 @@ const int femur_index = 0;
 const int tibia_index = 1;
 const int coxa_index = 2;
 
+const int right_front_leg = 0;
+const int right_back_leg = 1;
+const int left_front_leg = 2;
+const int left_back_leg = 3;
+
 const float length_femur = 40;
 const float length_tibia = 70;
 const float length_coxa = 33;
@@ -144,11 +149,11 @@ void setup()
     servo[leg][femur_index].attach(servo_pin[leg][femur_index]);
     servo[leg][tibia_index].attach(servo_pin[leg][tibia_index]);
     servo[leg][coxa_index].attach(servo_pin[leg][coxa_index]);
-//
-//    for (int j = 0; j < 3; j++) {
-//      servo[leg][j].attach(servo_pin[leg][j]);
-//      delay(100);
-//    }
+    //
+    //    for (int j = 0; j < 3; j++) {
+    //      servo[leg][j].attach(servo_pin[leg][j]);
+    //      delay(100);
+    //    }
   }
 
   // if needed, pause on initial servo positions for servo adjusting/installation
@@ -836,33 +841,29 @@ void polar_to_servo(int leg, float alpha, float beta, float gamma)
   beta += beta_error;
   gamma += gamma_error;
 
-  if (leg == 0)
-  {
+  if (leg == right_front_leg) {
+    gamma = 90 + gamma;
     alpha = 90 - alpha;
     beta = beta;
-    gamma = 90 + gamma;
-  }
-  else if (leg == 1)
-  {
-    alpha += 90;
-    beta = 180 - beta;
-    gamma = 90 - gamma;
-  }
-  else if (leg == 2)
-  {
-    alpha += 90;
-    beta = 180 - beta;
-    gamma = 90 - gamma;
-  }
-  else if (leg == 3)
-  {
-    alpha = 90 - alpha;
-    beta = beta;
-    gamma = 90 + gamma;
-  }
 
+  } else if (leg == right_back_leg)  {
+    gamma = 90 - gamma;
+    alpha = alpha + 90;
+    beta = 180 - beta;
+
+  } else if (leg == left_front_leg) {
+    gamma = 90 - gamma;
+    alpha = alpha + 90;
+    beta = 180 - beta;
+
+  } else if (leg == left_back_leg) {
+    gamma = 90 + gamma;
+    alpha = 90 - alpha;
+    beta = beta;
+  }
+  servo[leg][coxa_index].write(gamma);
   servo[leg][femur_index].write(alpha);
   servo[leg][tibia_index].write(beta);
-  servo[leg][coxa_index].write(gamma);
+
 }
 
